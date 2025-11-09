@@ -1,0 +1,34 @@
+{
+  "name": "playwrighium",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server that exposes reusable Playwright actions.",
+  "main": "dist/index.js",
+  "bin": {
+    "playwrighium": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "check": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "playwright"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.1",
+    "dotenv": "^17.2.3",
+    "playwright": "^1.56.1",
+    "ts-node": "^10.9.2",
+    "yaml": "^2.8.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

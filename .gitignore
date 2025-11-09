@@ -1,0 +1,10 @@
+node_modules
+.dist
+/build
+npm-debug.log
+.playwright
+playwright-report
+/dist
+.env
+.playwright-mcp/*/*.ts
+.playwright-mcp/*/*.yaml
