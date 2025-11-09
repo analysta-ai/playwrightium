@@ -1,6 +1,6 @@
 {
   "name": "playwrighium",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Model Context Protocol server that exposes reusable Playwright actions.",
   "main": "dist/index.js",
   "bin": {
