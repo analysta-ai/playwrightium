@@ -1,0 +1,39 @@
+# Source files
+src/
+tsconfig.json
+
+# Development files
+.env
+.env.example
+*.log
+
+# Build artifacts
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# GitHub
+.github/
+
+# Documentation (already in README)
+docs/
+
+# IDE
+.vscode/
+.idea/
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__/
+
+# Playwright artifacts
+.playwright/
+playwright-report/
+test-results/
+
+# User workspace (should be created by user)
+.playwright-mcp/scripts/*.ts
+.playwright-mcp/shortcuts/*.yaml
