@@ -1,332 +1,279 @@
-# Playwrighium - Reusable Browser Automation via MCP
+# Playwrightium
 
-A TypeScript-based [Model Context Protocol](https://modelcontextprotocol.io) server that bridges AI automation with reusable browser workflows. Instead of having AI generate individual browser steps each time, you define tested, reusable automation components that AI can intelligently select and execute.
+[![npm version](https://badge.fury.io/js/playwrightium.svg)](https://www.npmjs.com/package/playwrightium)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 🎯 The Problem Playwrighium Solves
+**Model Context Protocol server for browser automation with Playwright**
 
-**Traditional AI Automation Issues:**
-- AI regenerates the same steps repeatedly → inconsistent results
-- Complex workflows require perfect step-by-step generation → error-prone
-- No reusability → same login flows recreated every time
-- No version control → automation knowledge lost
+Build reusable browser automation workflows that AI can intelligently select and execute. Stop regenerating the same steps repeatedly—define tested automation once, use everywhere.
 
-**The Playwrighium Solution:**
-Playwrighium provides three complementary automation approaches:
-
-1. **Custom Actions** (TypeScript) - Reusable tools with full Playwright API access
-2. **Shortcuts** (YAML) - Simple, declarative command sequences
-3. **Scripts** (TS/JS) - Advanced automation logic with programming capabilities
+---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Node.js 16+
-- MCP-compatible client (Claude Desktop, VS Code, etc.)
-
 ### Installation
+
 ```bash
-npm install
-npm run build
+# Install globally
+npm install -g playwrightium
+
+# Or use with npx (no installation needed)
+npx playwrightium
+```
+
+### MCP Configuration
+
+Add to your MCP settings (VS Code, Claude Desktop, etc.):
+
+```json
+{
+  "mcpServers": {
+    "playwrightium": {
+      "command": "npx",
+      "args": ["-y", "playwrightium"]
+    }
+  }
+}
+```
+
+**That's it!** The server will automatically create a `.playwright-mcp` workspace in your home directory.
+
+#### Custom Workspace (Optional)
+
+```json
+{
+  "mcpServers": {
+    "playwrightium": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "playwrightium",
+        "--base",
+        "/path/to/your/workspace"
+      ]
+    }
+  }
+}
 ```
 
 ### Your First Automation
 
-Create a simple shortcut (`.playwright-mcp/shortcuts/google-search.yaml`):
+Use the `@create-shortcut` prompt in your AI assistant:
 
-```yaml
-commands:
-  - type: navigate
-    url: "https://google.com"
-    description: "Navigate to Google"
-
-  - type: fill
-    selector: 'input[name="q"]'
-    value: "Playwright automation"
-    description: "Enter search term"
-
-  - type: press_key
-    key: "Enter"
-    description: "Submit search"
-
-  - type: screenshot
-    path: "search-results.png"
-    description: "Capture results"
+```
+@create-shortcut Login to my staging environment
 ```
 
-Execute using the `browser-session` action:
+The AI will guide you through:
+1. Testing the workflow manually with `browser-session`
+2. Creating a YAML shortcut with proper selectors
+3. Saving to `.playwright-mcp/shortcuts/login.yaml`
+4. Testing the final shortcut
+
+---
+
+## 🎯 Three Ways to Automate
+
+### 1. Browser Session (Built-in)
+Execute commands directly without creating files:
+
 ```json
 {
+  "tool": "browser-session",
   "commands": [
-    { "type": "navigate", "url": "https://google.com" },
-    { "type": "fill", "selector": "input[name=\"q\"]", "value": "Playwright automation" },
-    { "type": "press_key", "key": "Enter" },
-    { "type": "screenshot", "path": "search-results.png" }
+    { "type": "navigate", "url": "https://example.com" },
+    { "type": "fill", "selector": "#email", "value": "user@example.com" },
+    { "type": "click", "selector": "button[type='submit']" },
+    { "type": "screenshot", "path": "result.png" }
   ]
 }
 ```
 
-## 🎨 Three Automation Approaches
-
-### 1. Custom Actions (TypeScript)
-Reusable tools that appear as MCP tools in your AI clients.
-
-```typescript
-// .playwright-mcp/actions/login-to-staging.ts
-import { z } from 'zod';
-import type { PlaywrightActionDefinition } from '../action-types';
-
-const action: PlaywrightActionDefinition = {
-  name: 'login-to-staging',
-  description: 'Login to our staging environment',
-  inputSchema: z.object({
-    role: z.enum(['admin', 'user']).optional()
-  }),
-  async run({ page, input, logger, env }) {
-    await page.goto(env.STAGING_URL);
-    await page.fill('#email', env.STAGING_EMAIL);
-    await page.fill('#password', env.STAGING_PASSWORD);
-    await page.click('button[type="submit"]');
-    await page.waitForText('Dashboard');
-
-    return { message: 'Successfully logged in' };
-  }
-};
-
-export default action;
-```
-
 ### 2. Shortcuts (YAML)
-Simple command sequences for repetitive workflows.
+Reusable workflows with environment variable support:
 
 ```yaml
-# .playwright-mcp/shortcuts/login-flow.yaml
+# .playwright-mcp/shortcuts/login.yaml
 commands:
   - type: navigate
     url: ${{STAGING_URL}}
-    description: "Navigate to staging"
-
+  
   - type: fill
     selector: "#email"
     value: ${{USER_EMAIL}}
-    description: "Enter email"
-
+  
   - type: fill
     selector: "#password"
     value: ${{USER_PASSWORD}}
-    description: "Enter password"
-
+  
   - type: click
     selector: 'button[type="submit"]'
-    description: "Submit login"
-
+  
   - type: wait_for_text
-    text: "Welcome"
-    description: "Wait for success"
+    text: "Dashboard"
 ```
 
+Run with: `execute-shortcut { "shortcutPath": "login.yaml" }`
+
 ### 3. Scripts (TypeScript/JavaScript)
-Advanced automation with full programming capabilities.
+Advanced automation with full programming capabilities:
 
 ```typescript
-// .playwright-mcp/scripts/extract-data.ts
-export default async function({ page, args, logger }) {
-  await page.goto('https://example.com/data');
+// .playwright-mcp/scripts/extract-users.ts
+import type { Page } from 'playwright';
 
-  const users = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('.user-row'))
-      .map(row => ({
-        name: row.querySelector('.name').textContent,
-        email: row.querySelector('.email').textContent
-      }));
-  });
-
+export default async function({ page, logger, env }) {
+  await page.goto(env.ADMIN_URL);
+  
+  const users = await page.$$eval('.user-row', rows =>
+    rows.map(row => ({
+      name: row.querySelector('.name').textContent,
+      email: row.querySelector('.email').textContent
+    }))
+  );
+  
   logger(`Extracted ${users.length} users`);
   return { users };
 }
 ```
 
-## 🔐 Environment Variables & Secrets
+Run with: `execute-script { "scriptPath": "extract-users.ts" }`
 
-Keep credentials secure using environment variables with `${{VARIABLE_NAME}}` syntax:
+---
 
-### .env File (at repository root)
+## 🔐 Environment Variables
+
+Keep credentials secure using `.env` files:
+
 ```bash
-# .env
-STAGING_URL=https://staging.myapp.com
+# .env (at repository root)
+STAGING_URL=https://staging.example.com
 USER_EMAIL=test@example.com
 USER_PASSWORD=secure-password
 API_KEY=your-api-key
 ```
 
-### Usage in All Automation Types
-```yaml
-# Shortcuts
-- type: navigate
-  url: ${{STAGING_URL}}
+Use in shortcuts: `${{VARIABLE_NAME}}`  
+Use in scripts: `env.VARIABLE_NAME`
 
-# Also works in Custom Actions and Scripts
-```
+---
 
-## 🧰 Built-in Actions
+## 🧰 Built-in Tools
 
-Playwrighium ships with powerful built-in actions:
-
-- **`browser-session`** ⭐ - Execute 25+ browser commands in one session
-- **`execute-shortcut`** - Run YAML command sequences
+- **`browser-session`** - Execute 25+ browser commands in one call
+- **`execute-shortcut`** - Run YAML workflow files
 - **`execute-script`** - Run TypeScript/JavaScript automation
-- **`browser-debug`** - Interactive debugging sessions
-- **`browser-snapshot`** - Save/restore browser state
+- **`browser-snapshot`** - Capture page state for debugging
+- **`browser-debug`** - Get console logs and network requests
+- **`close-browser`** - Reset browser session
 
-**25+ command types available:** navigate, click, fill, screenshot, evaluate, wait_for_text, get_text, scroll, and more!
+### Available Commands
 
-## 📁 Project Structure
+Navigate, click, fill, type, hover, screenshot, scroll, evaluate, wait_for_text, get_text, get_attribute, press_key, select_option, check, uncheck, upload_file, drag, reload, get_url, get_title, and more!
 
+---
+
+## 🤖 AI Assistant Prompts
+
+Playwrightium includes built-in prompts to guide automation creation:
+
+### `@create-shortcut`
+Creates YAML shortcuts with proper testing workflow:
 ```
-.
-├── docs/                           # 📚 Comprehensive documentation
-│   ├── README.md                   # Documentation overview
-│   ├── 01-overview.md              # Core concepts
-│   ├── 02-quick-start.md           # Get started guide
-│   ├── 04-custom-actions.md        # TypeScript automation tools
-│   ├── 05-shortcuts.md             # YAML workflows
-│   ├── 06-scripts.md               # Advanced TS/JS logic
-│   ├── 08-secrets.md               # Environment variables
-│   ├── 09-architecture.md          # System design
-│   ├── 10-best-practices.md        # Robust automation patterns
-│   └── 11-commands.md              # Complete command reference
-├── src/                            # MCP server implementation
-│   ├── index.ts                    # Main MCP server
-│   └── actions/                    # Built-in actions
-│       ├── browser-session.ts      # 🌟 Main browser automation
-│       ├── execute-shortcut.ts     # YAML executor
-│       ├── execute-script.ts       # TS/JS executor
-│       └── types.ts                # Type definitions
-├── .playwright-mcp/                # 🎯 Your automation workspace
-│   ├── actions/                    # Custom TypeScript actions
-│   ├── shortcuts/                  # YAML command sequences
-│   ├── scripts/                    # TS/JS automation scripts
-│   ├── action-types.d.ts           # Type definitions
-│   └── SECRETS.md                  # Environment variable guide
-└── package.json
+@create-shortcut Login to staging and navigate to user dashboard
 ```
 
-## 🔧 MCP Client Setup
-
-### Claude Desktop
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "playwrighium": {
-      "command": "node",
-      "args": ["/path/to/playwrighium/dist/index.js"],
-      "env": {
-        "PLAYWRIGHIUM_BASE_DIR": "/path/to/playwrighium"
-      }
-    }
-  }
-}
+### `@create-script`
+Creates TypeScript scripts with best practices:
+```
+@create-script Extract all product data from the admin panel
 ```
 
-### VS Code MCP Extension
-Configure in workspace settings:
+Both prompts enforce:
+- ✅ Test manually first with `browser-session`
+- ✅ Use environment variables for credentials
+- ✅ Create file only after successful testing
+- ✅ Include comprehensive error handling
 
-```json
-{
-  "mcp.servers": {
-    "playwrighium": {
-      "command": "node",
-      "args": ["./dist/index.js"],
-      "cwd": "${workspaceFolder}"
-    }
-  }
-}
-```
-
-## ⚙️ Configuration Options
-
-### Browser Mode
-```bash
-# Headed (default) - see automation in action
-npm run dev
-
-# Headless - run in background
-npm run dev -- --headless
-PLAYWRIGHIUM_HEADLESS=1 npm run dev
-```
-
-### Custom Paths
-```bash
-# Custom action directory
-npm run dev -- --actions /path/to/actions
-
-# Custom base directory
-npm run dev -- --base /path/to/project
-```
-
-### Environment Variables
-```bash
-PLAYWRIGHIUM_ACTIONS_DIR=/path/to/actions
-PLAYWRIGHIUM_BASE_DIR=/path/to/project
-PLAYWRIGHIUM_HEADLESS=1
-PLAYWRIGHIUM_VERBOSE=1
-```
+---
 
 ## 📖 Documentation
 
-### Quick References
-- **[Quick Start Guide](./docs/02-quick-start.md)** - Get running in 5 minutes
-- **[Command Reference](./docs/11-commands.md)** - All 25+ browser commands
-- **[Best Practices](./docs/10-best-practices.md)** - Robust automation patterns
+Full documentation available in the [docs/](./docs/) directory:
 
-### Deep Dives
+- **[Quick Start Guide](./docs/02-quick-start.md)** - Detailed setup and first automation
+- **[Commands Reference](./docs/11-commands.md)** - Complete command documentation
+- **[Shortcuts Guide](./docs/05-shortcuts.md)** - YAML workflow creation
+- **[Scripts Guide](./docs/06-scripts.md)** - TypeScript/JavaScript automation
+- **[Secrets Management](./docs/08-secrets.md)** - Environment variables and security
 - **[Custom Actions](./docs/04-custom-actions.md)** - Build reusable TypeScript tools
-- **[Shortcuts](./docs/05-shortcuts.md)** - Master YAML workflows
-- **[Scripts](./docs/06-scripts.md)** - Advanced TS/JS automation
-- **[Environment Variables](./docs/08-secrets.md)** - Secure credential management
-- **[Architecture](./docs/09-architecture.md)** - How Playwrighium works
+- **[Best Practices](./docs/10-best-practices.md)** - Robust automation patterns
+- **[Architecture](./docs/09-architecture.md)** - How Playwrightium works
 
-### Getting Help
-- **[Troubleshooting](./docs/13-troubleshooting.md)** - Debug common issues
-- **[API Reference](./docs/12-api-reference.md)** - Complete TypeScript interfaces
-
-## 🎯 When to Use What
-
-| Use Case | Tool | Example |
-|----------|------|---------|
-| **One-off automation** | `browser-session` | Quick form fill, screenshot |
-| **Repeated sequences** | **Shortcuts** (YAML) | Login flows, navigation paths |
-| **Complex logic** | **Scripts** (TS/JS) | Data extraction, conditional flows |
-| **Reusable tools** | **Custom Actions** | App-specific integrations |
+---
 
 ## 🌟 Key Features
 
-- 🚀 **TypeScript-first** with full Playwright support
-- 🧰 **Dynamic tool loading** from `.playwright-mcp/actions/*.ts|js`
-- 🧪 **Zod-powered validation** for every action
-- 🧾 **Built-in logging** relayed through MCP notifications
-- 🎯 **Persistent browser sessions** with detailed result tracking
-- 🔧 **Flexible selector strategies** (CSS, text, role, label, testid, placeholder)
 - 🖥️ **Headed browser by default** - see your automation in action
-- 🔐 **Secure secret management** with environment variables
-- ⚡ **Hot reloading** - edit actions without rebuilding
+- 🔐 **Secure secret management** - environment variables with `${{VAR}}` syntax
+- 🎯 **Persistent browser sessions** - maintain state across actions
+- 🤖 **AI-guided creation** - built-in prompts for shortcuts and scripts
+- 📦 **Three automation layers** - browser commands, shortcuts, and scripts
+- 🔧 **TypeScript-first** - full type safety and intellisense
+- ⚡ **Zero config** - works out of the box with sensible defaults
+- 🧪 **Test-first workflow** - manual testing before file creation
 
-## 🔄 Development Workflow
+---
+
+## 🔄 Development
+
+### Local Development
 
 ```bash
-# Development scripts
-npm run dev          # Start server with hot reload
-npm run build        # Compile TypeScript
-npm start           # Run compiled server
-npm run check       # Type-check without building
+git clone https://github.com/analysta-ai/playwrightium.git
+cd playwrightium
+npm install
+npm run build
+npm run dev
 ```
 
-## 💡 Example Workflows
+### Configuration Options
 
-### E-commerce Testing
+```bash
+# Headed (default) - watch automation
+playwrightium
+
+# Headless - background execution
+playwrightium --headless
+PLAYWRIGHTIUM_HEADLESS=1 playwrightium
+
+# Custom workspace
+playwrightium --base /path/to/workspace --actions .my-actions
+
+# Verbose logging
+playwrightium --verbose
+```
+
+---
+
+## � Examples
+
+### Quick Search Automation
+```json
+{
+  "tool": "browser-session",
+  "commands": [
+    { "type": "navigate", "url": "https://google.com" },
+    { "type": "fill", "selector": "input[name='q']", "value": "Playwright" },
+    { "type": "press_key", "key": "Enter" },
+    { "type": "screenshot", "path": "results.png" }
+  ]
+}
+```
+
+### E-commerce Testing Shortcut
 ```yaml
-# Test complete checkout flow
+# test-checkout.yaml
 commands:
   - type: navigate
     url: ${{SHOP_URL}}
@@ -334,130 +281,45 @@ commands:
     selector: "#search"
     value: "laptop"
   - type: click
-    selector: ".product-card:first-child"
+    selector: ".product:first-child"
   - type: click
     selector: "#add-to-cart"
-  - type: click
-    selector: "#checkout"
   - type: screenshot
-    path: "checkout-page.png"
+    path: "cart.png"
 ```
 
-### Data Extraction
+### Data Extraction Script
 ```typescript
-// Extract user data from admin panel
-export default async function({ page, env }) {
-  await page.goto(`${env.ADMIN_URL}/users`);
-
-  const users = await page.$$eval('.user-row', rows =>
-    rows.map(row => ({
-      id: row.querySelector('.id').textContent,
-      name: row.querySelector('.name').textContent,
-      email: row.querySelector('.email').textContent
-    }))
-  );
-
-  return { users, count: users.length };
+export default async function({ page, env, logger }) {
+  await page.goto(`${env.ADMIN_URL}/reports`);
+  
+  const data = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll('.data-row'))
+      .map(row => ({
+        date: row.querySelector('.date').textContent,
+        revenue: row.querySelector('.revenue').textContent
+      }));
+  });
+  
+  logger(`Extracted ${data.length} records`);
+  return { data, timestamp: new Date().toISOString() };
 }
 ```
 
-### Health Monitoring
-```typescript
-// Custom action for health checks
-const healthCheck: PlaywrightActionDefinition = {
-  name: 'health-check',
-  description: 'Check application health across environments',
-  inputSchema: z.object({
-    environments: z.array(z.string()).default(['dev', 'staging'])
-  }),
-  async run({ page, input, env, logger }) {
-    const results = [];
+---
 
-    for (const env_name of input.environments) {
-      const url = env[`${env_name.toUpperCase()}_URL`];
-      try {
-        await page.goto(`${url}/health`);
-        const status = await page.textContent('.health-status');
-        results.push({ environment: env_name, status, healthy: true });
-        logger(`✅ ${env_name}: ${status}`);
-      } catch (error) {
-        results.push({ environment: env_name, error: error.message, healthy: false });
-        logger(`❌ ${env_name}: ${error.message}`);
-      }
-    }
+## 🔗 Links
 
-    return { results };
-  }
-};
-```
-
-## 🚀 Integration Examples
-
-### With AI Agents
-```
-🤖 "Check the user dashboard and take a screenshot"
-→ AI selects: login-to-production action
-→ Then: navigate-to-dashboard shortcut
-→ Finally: screenshot command
-✅ Returns: Dashboard screenshot and user count
-```
-
-### With CI/CD Pipelines
-```bash
-# Automated testing in GitHub Actions
-- name: Run health checks
-  run: |
-    npm run build
-    echo '{"environments": ["staging", "production"]}' | \
-    node dist/index.js health-check
-```
-
-## 📈 Benefits
-
-### For AI Agents
-- **Consistent Results**: Pre-tested workflows eliminate variability
-- **Faster Execution**: No need to generate steps, just select tools
-- **Better Context**: Rich descriptions help AI choose the right tool
-- **Structured Output**: Predictable result formats for chaining
-
-### For Developers
-- **Reusability**: Write once, use everywhere
-- **Version Control**: Track automation changes over time
-- **Team Sharing**: Standardized automation across teams
-- **Gradual Complexity**: Start simple, add complexity as needed
-
-### For Organizations
-- **Standardization**: Consistent automation patterns
-- **Knowledge Capture**: Institutional automation knowledge preserved
-- **Maintenance**: Update automation logic in one place
-- **Security**: Centralized secret management
-
-## 📝 Notes
-
-- **Built-in actions** are loaded from `src/actions/` and always available
-- **Custom actions** are loaded from `.playwright-mcp/actions/` (repo-specific)
-- **Persistent browser sessions** maintained across actions (configurable)
-- **TypeScript actions** executed through `ts-node` automatically
-- **Hot reloading** - edit actions without rebuilding, just reload MCP clients
-- **Headed by default** - watch your automation run for easier debugging
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add your improvements
-4. Write tests and documentation
-5. Submit a pull request
-
-## 📄 License
-
-MIT License - see LICENSE file for details.
+- **NPM Package**: https://www.npmjs.com/package/playwrightium
+- **GitHub Repository**: https://github.com/analysta-ai/playwrightium
+- **Documentation**: [./docs/](./docs/)
+- **Model Context Protocol**: https://modelcontextprotocol.io
+- **Playwright**: https://playwright.dev
 
 ---
 
-**Ready to get started?**
-1. Follow the [Quick Start Guide](./docs/02-quick-start.md)
-2. Explore [example workflows](./docs/)
-3. Build your first [Custom Action](./docs/04-custom-actions.md)
+## 🤝 Contributing
+
+Contributions welcome! Please read our contributing guidelines and submit pull requests to the repository.
 
 Happy automating! 🚀
