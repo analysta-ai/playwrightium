@@ -13,7 +13,9 @@
     ".playwright-mcp"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:tsc && npm run build:copy-assets",
+    "build:tsc": "tsc",
+    "build:copy-assets": "node -e \"const fs=require('fs'); fs.cpSync('src/prompts','dist/prompts',{recursive:true}); fs.cpSync('src/chatmodes','dist/chatmodes',{recursive:true});\"",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js",
     "check": "tsc --noEmit",

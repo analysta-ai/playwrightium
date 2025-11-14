@@ -78,11 +78,137 @@ function interpolateSecretsInObject(obj: any): any {
   return obj;
 }
 
+async function handleSeedCommand() {
+  const args = process.argv.slice(2);
+  let loopType: 'copilot' | 'claude' | null = null;
+
+  // Parse --loop argument
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg.startsWith('--loop=')) {
+      const value = arg.split('=')[1];
+      if (value === 'copilot' || value === 'claude') {
+        loopType = value;
+      }
+    } else if (arg === '--loop') {
+      const value = args[i + 1];
+      if (value === 'copilot' || value === 'claude') {
+        loopType = value;
+        i++;
+      }
+    }
+  }
+
+  if (!loopType) {
+    console.error('Error: --loop parameter is required. Use: playwrightium seed --loop=copilot or --loop=claude');
+    process.exit(1);
+  }
+
+  const cwd = process.cwd();
+  console.log(`🌱 Seeding Playwrightium ${loopType} configuration in ${cwd}...`);
+
+  try {
+    if (loopType === 'copilot') {
+      await seedCopilot(cwd);
+    } else {
+      await seedClaude(cwd);
+    }
+    console.log('✅ Seeding complete!');
+  } catch (error) {
+    console.error('❌ Seeding failed:', error);
+    throw error;
+  }
+}
+
+async function seedCopilot(cwd: string) {
+  const chatmodesDir = path.join(cwd, '.github', 'chatmodes');
+  const promptsDir = path.join(cwd, '.github', 'prompts');
+
+  // Create directories
+  await fs.mkdir(chatmodesDir, { recursive: true });
+  await fs.mkdir(promptsDir, { recursive: true });
+
+  const srcPromptsDir = path.join(__dirname, 'prompts');
+  const srcChatmodesDir = path.join(__dirname, 'chatmodes');
+  
+  // Copy prompts with correct naming: *.prompt.md
+  const shortcutPrompt = await fs.readFile(path.join(srcPromptsDir, 'create-shortcut.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(promptsDir, 'create-playwrightium-shortcut.prompt.md'),
+    shortcutPrompt
+  );
+  console.log(`  📄 Created ${path.relative(cwd, path.join(promptsDir, 'create-playwrightium-shortcut.prompt.md'))}`);
+
+  const scriptPrompt = await fs.readFile(path.join(srcPromptsDir, 'create-script.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(promptsDir, 'create-playwrightium-script.prompt.md'),
+    scriptPrompt
+  );
+  console.log(`  📄 Created ${path.relative(cwd, path.join(promptsDir, 'create-playwrightium-script.prompt.md'))}`);
+
+  // Copy chatmodes with correct naming: *.chatmode.md
+  const testDeveloperChatmode = await fs.readFile(path.join(srcChatmodesDir, 'test-developer.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(chatmodesDir, 'test-developer.chatmode.md'),
+    testDeveloperChatmode
+  );
+  console.log(`  🤖 Created ${path.relative(cwd, path.join(chatmodesDir, 'test-developer.chatmode.md'))}`);
+
+  const testExecutorChatmode = await fs.readFile(path.join(srcChatmodesDir, 'test-executor.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(chatmodesDir, 'test-executor.chatmode.md'),
+    testExecutorChatmode
+  );
+  console.log(`  🤖 Created ${path.relative(cwd, path.join(chatmodesDir, 'test-executor.chatmode.md'))}`);
+}
+
+async function seedClaude(cwd: string) {
+  const agentsDir = path.join(cwd, '.claude', 'agents');
+  const skillsDir = path.join(cwd, '.claude', 'skills');
+
+  // Create directories
+  await fs.mkdir(agentsDir, { recursive: true });
+  await fs.mkdir(skillsDir, { recursive: true });
+
+  const srcPromptsDir = path.join(__dirname, 'prompts');
+  const srcChatmodesDir = path.join(__dirname, 'chatmodes');
+  
+  // Copy prompts to skills directory
+  const shortcutPrompt = await fs.readFile(path.join(srcPromptsDir, 'create-shortcut.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(skillsDir, 'create-playwrightium-shortcut.md'),
+    shortcutPrompt
+  );
+  console.log(`  📄 Created ${path.relative(cwd, path.join(skillsDir, 'create-playwrightium-shortcut.md'))}`);
+
+  const scriptPrompt = await fs.readFile(path.join(srcPromptsDir, 'create-script.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(skillsDir, 'create-playwrightium-script.md'),
+    scriptPrompt
+  );
+  console.log(`  📄 Created ${path.relative(cwd, path.join(skillsDir, 'create-playwrightium-script.md'))}`);
+
+  // Copy chatmodes/agents
+  const testDeveloperChatmode = await fs.readFile(path.join(srcChatmodesDir, 'test-developer.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(agentsDir, 'test-developer.md'),
+    testDeveloperChatmode
+  );
+  console.log(`  🤖 Created ${path.relative(cwd, path.join(agentsDir, 'test-developer.md'))}`);
+
+  const testExecutorChatmode = await fs.readFile(path.join(srcChatmodesDir, 'test-executor.md'), 'utf-8');
+  await fs.writeFile(
+    path.join(agentsDir, 'test-executor.md'),
+    testExecutorChatmode
+  );
+  console.log(`  🤖 Created ${path.relative(cwd, path.join(agentsDir, 'test-executor.md'))}`);
+}
+
 async function main() {
   const pkg = await readPackageJson();
   await ensureActionWorkspace();
   const server = new McpServer({
-    name: pkg.name ?? 'playwrighium',
+    name: pkg.name ?? 'playwrightium',
     version: pkg.version ?? '0.1.0',
     description: pkg.description ?? 'Reusable Playwright shortcuts surfaced via MCP.'
   });
@@ -116,10 +242,22 @@ async function main() {
   });
 }
 
-main().catch(error => {
-  console.error('[playwrighium] Fatal error', error);
-  process.exit(1);
-});
+// Check if this is a CLI command (seed) or MCP server mode
+const args = process.argv.slice(2);
+const command = args[0];
+
+if (command === 'seed') {
+  handleSeedCommand().catch(error => {
+    console.error('[playwrightium] Seed command failed:', error);
+    process.exit(1);
+  });
+} else {
+  // Normal MCP server mode
+  main().catch(error => {
+    console.error('[playwrightium] Fatal error', error);
+    process.exit(1);
+  });
+}
 
 async function readPackageJson() {
   try {

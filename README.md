@@ -56,6 +56,20 @@ Add to your MCP settings (VS Code, Claude Desktop, etc.):
 }
 ```
 
+### Seed AI Assistant Integration (Optional)
+
+Install chatmodels and prompts for your AI assistant:
+
+```bash
+# For GitHub Copilot
+playwrightium seed --loop=copilot
+
+# For Claude
+playwrightium seed --loop=claude
+```
+
+This creates workspace-specific configurations in `.github/chatmodels` and `.github/prompts` (Copilot) or `.claude/agents` (Claude).
+
 ### Your First Automation
 
 Use the `@create-shortcut` prompt in your AI assistant:
@@ -194,6 +208,17 @@ Both prompts enforce:
 - ✅ Use environment variables for credentials
 - ✅ Create file only after successful testing
 - ✅ Include comprehensive error handling
+
+### Project-Level Integration
+
+Use `playwrightium seed` to install chatmodels/agents in your project for team-wide consistency:
+
+```bash
+playwrightium seed --loop=copilot  # → .github/chatmodels & prompts
+playwrightium seed --loop=claude   # → .claude/agents
+```
+
+See [Seed Command Documentation](./docs/13-seed-command.md) for details.
 
 ---
 
