@@ -430,10 +430,24 @@ function normalizeInputSchema(schema?: ActionInputSchema): z.ZodRawShape | undef
 }
 
 async function runAction(action: LoadedAction, args: Record<string, unknown>, server: McpServer, sessionId?: string): Promise<CallToolResult> {
-  const browserName = action.definition.browser ?? CLI_OPTIONS.browser;
+  let browserName = action.definition.browser ?? CLI_OPTIONS.browser;
+  let channel: string | undefined = undefined;
+  
+  // Map browser names to Playwright browser types and channels
+  const browserLower = browserName.toLowerCase();
+  if (browserLower === 'chrome') {
+    browserName = 'chromium';
+    channel = 'chrome';
+  } else if (browserLower === 'edge') {
+    browserName = 'chromium';
+    channel = 'msedge';
+  } else if (browserLower === 'safari') {
+    browserName = 'webkit';
+  }
+  
   const launcher = (playwright as Record<string, unknown>)[browserName];
   if (!launcher) {
-    return toolError(`Unsupported browser engine: ${browserName}. Supported: chromium, firefox, webkit`);
+    return toolError(`Unsupported browser: ${browserName}. Supported: chromium, chrome, firefox, webkit, edge`);
   }
 
   const browserType = launcher as playwright.BrowserType<playwright.Browser>;
@@ -450,10 +464,14 @@ async function runAction(action: LoadedAction, args: Record<string, unknown>, se
     context = persistentContext;
     page = persistentPage;
   } else {
-    await logger(`Launching ${browserName}`, 'debug');
+    await logger(`Launching ${channel || browserName}`, 'debug');
     // Use global HEADLESS setting if action doesn't specify, default to headed (false)
     const headlessMode = action.definition.headless ?? HEADLESS;
-    browser = await browserType.launch({ headless: headlessMode });
+    const launchOptions: playwright.LaunchOptions = { headless: headlessMode };
+    if (channel) {
+      launchOptions.channel = channel as any;
+    }
+    browser = await browserType.launch(launchOptions);
     context = await browser.newContext(action.definition.contextOptions);
     page = await context.newPage();
     
