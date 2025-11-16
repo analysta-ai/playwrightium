@@ -17,11 +17,12 @@ interface CliOptions {
   baseDir: string;
   verbose: boolean;
   headless: boolean;
+  browser: string;
 }
 
 const CLI_OPTIONS = parseCliOptions();
-const ACTION_ROOT = CLI_OPTIONS.actionRoot;
-const BASE_DIR = CLI_OPTIONS.baseDir;
+const ACTION_ROOT = CLI_OPTIONS.actionRoot!;
+const BASE_DIR = CLI_OPTIONS.baseDir!;
 const VERBOSE = CLI_OPTIONS.verbose;
 const HEADLESS = CLI_OPTIONS.headless;
 const BUILTIN_ACTIONS_DIR = path.join(__dirname, 'actions');
@@ -429,10 +430,10 @@ function normalizeInputSchema(schema?: ActionInputSchema): z.ZodRawShape | undef
 }
 
 async function runAction(action: LoadedAction, args: Record<string, unknown>, server: McpServer, sessionId?: string): Promise<CallToolResult> {
-  const browserName = action.definition.browser ?? 'chromium';
+  const browserName = action.definition.browser ?? CLI_OPTIONS.browser;
   const launcher = (playwright as Record<string, unknown>)[browserName];
   if (!launcher) {
-    return toolError(`Unsupported browser engine: ${browserName}`);
+    return toolError(`Unsupported browser engine: ${browserName}. Supported: chromium, firefox, webkit`);
   }
 
   const browserType = launcher as playwright.BrowserType<playwright.Browser>;
@@ -579,6 +580,7 @@ function parseCliOptions(): CliOptions {
   const baseAliases = ['--base', '--repo', '--project', '--working-dir', '-C'];
   const verboseAliases = ['--verbose', '-v'];
   const headlessAliases = ['--headless', '-h'];
+  const browserAliases = ['--browser', '-b'];
 
   let actionRoot =
     process.env.PLAYWRIGHIUM_ACTIONS_DIR ??
@@ -594,6 +596,9 @@ function parseCliOptions(): CliOptions {
   
   // Default to headed browser (headless: false), unless explicitly set
   let headless = process.env.PLAYWRIGHIUM_HEADLESS === '1';
+  
+  // Default browser: chromium (Chrome). Options: chromium, firefox, webkit
+  let browser = process.env.PLAYWRIGHIUM_BROWSER ?? 'chromium';
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -626,6 +631,15 @@ function parseCliOptions(): CliOptions {
       headless = true;
       continue;
     }
+
+    if (browserAliases.includes(key)) {
+      const value =
+        valueFromAssignment !== undefined ? valueFromAssignment : args[++i];
+      if (value) {
+        browser = value;
+      }
+      continue;
+    }
   }
 
   const resolvedBase = path.resolve(baseDir ?? process.cwd());
@@ -636,7 +650,7 @@ function parseCliOptions(): CliOptions {
         : path.resolve(resolvedBase, actionRoot)
       : path.join(resolvedBase, '.playwright-mcp');
 
-  return { actionRoot: resolvedActions, baseDir: resolvedBase, verbose, headless };
+  return { actionRoot: resolvedActions, baseDir: resolvedBase, verbose, headless, browser };
 }
 
 async function reportVerbose(server: McpServer, message: string) {
