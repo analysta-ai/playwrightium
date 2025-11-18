@@ -80,7 +80,7 @@ const browserSession: PlaywrightActionDefinition = {
       
       // General
       description: z.string().optional().describe('Human-readable description of this step')
-    })).describe('Array of browser commands to execute in sequence')
+    }).passthrough()).describe('Array of browser commands to execute in sequence')
   }),
   headless: false,
   async run({ page, input, logger }) {
