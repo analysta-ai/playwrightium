@@ -248,13 +248,19 @@ Only specify required parameters per command type. All other fields are optional
     const successCount = results.filter(r => r.success).length;
     await logger(`\n✨ Session complete: ${successCount}/${results.length} commands succeeded`);
 
+    // Capture final page accessibility snapshot
+    const snapshot = await page.accessibility.snapshot();
+    await logger(`📊 Final page snapshot captured`);
+
     return {
-      message: `Browser session completed: ${successCount}/${results.length} commands succeeded`,
+      message: `Browser session completed: ${successCount}/${results.length} commands succeeded\n🔗 Final URL: ${page.url()}\n📄 Page title: ${await page.title()}\n\n📊 Page Structure:\n${JSON.stringify(snapshot, null, 2)}`,
       structuredContent: {
         totalCommands: results.length,
         succeeded: successCount,
         failed: results.length - successCount,
         finalUrl: page.url(),
+        finalTitle: await page.title(),
+        pageSnapshot: snapshot,
         results
       }
     };
