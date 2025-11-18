@@ -313,6 +313,12 @@ async function loadActionsFrom(dir: string, source: string, server?: McpServer):
 }
 
 function isSupportedActionFile(filename: string) {
+  // Exclude files that are not actions
+  const excludedFiles = ['types.ts', 'types.js', 'types.d.ts', 'index.ts', 'index.js'];
+  if (excludedFiles.includes(filename)) {
+    return false;
+  }
+  
   return ['.ts', '.tsx', '.js', '.cjs', '.mjs'].includes(path.extname(filename));
 }
 
