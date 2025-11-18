@@ -8,80 +8,28 @@ import type { PlaywrightActionDefinition } from './types';
 const browserSession: PlaywrightActionDefinition = {
   name: 'browser-session',
   title: 'Browser Session',
-  description: 'Execute multiple browser commands (navigate, click, type, screenshot, etc.) in a single persistent session. Supports all common Playwright operations.',
-  inputSchema: z.object({
-    commands: z.array(z.object({
-      type: z.enum([
-        'navigate',
-        'navigate_back',
-        'click',
-        'type',
-        'fill',
-        'press_key',
-        'hover',
-        'select_option',
-        'drag',
-        'wait_for_text',
-        'wait_for_timeout',
-        'wait_for_selector',
-        'screenshot',
-        'evaluate',
-        'get_text',
-        'get_attribute',
-        'check',
-        'uncheck',
-        'upload_file',
-        'clear',
-        'scroll',
-        'reload',
-        'get_url',
-        'get_title'
-      ]),
-      
-      // Navigation
-      url: z.string().optional().describe('URL for navigate'),
-      
-      // Selectors
-      selector: z.string().optional().describe('CSS selector, text content, or role'),
-      
-      // Input values
-      value: z.string().optional().describe('Value to type, fill, or select'),
-      text: z.string().optional().describe('Text to wait for or search'),
-      
-      // Click options
-      button: z.enum(['left', 'right', 'middle']).optional(),
-      clickCount: z.number().optional().describe('Number of clicks (1=single, 2=double)'),
-      
-      // Keyboard
-      key: z.string().optional().describe('Key to press (Enter, Tab, ArrowDown, etc.)'),
-      
-      // Drag
-      targetSelector: z.string().optional().describe('Target selector for drag operation'),
-      
-      // Wait options
-      timeout: z.number().optional().describe('Timeout in milliseconds'),
-      
-      // Screenshot options
-      path: z.string().optional().describe('Path to save screenshot'),
-      fullPage: z.boolean().optional().describe('Capture full scrollable page'),
-      
-      // Evaluate
-      script: z.string().optional().describe('JavaScript to evaluate'),
-      
-      // Attribute
-      attribute: z.string().optional().describe('Attribute name to get'),
-      
-      // File upload
-      files: z.array(z.string()).optional().describe('File paths to upload'),
-      
-      // Scroll
-      x: z.number().optional(),
-      y: z.number().optional(),
-      
-      // General
-      description: z.string().optional().describe('Human-readable description of this step')
-    }).passthrough()).describe('Array of browser commands to execute in sequence')
-  }),
+  description: `Execute multiple browser commands in a single persistent session. Supports 24 command types:
+
+NAVIGATION: navigate (goto URL), navigate_back, reload, get_url, get_title
+INTERACTION: click, type (sequential keystrokes), fill (instant input), press_key, hover
+SELECTION: check, uncheck, select_option (dropdowns)
+ADVANCED: drag (drag-and-drop), upload_file, clear (clear input)
+WAITING: wait_for_text, wait_for_selector, wait_for_timeout
+EXTRACTION: get_text, get_attribute
+UTILITIES: screenshot (full page or viewport), evaluate (run JavaScript), scroll
+
+SELECTOR STRATEGIES:
+- CSS selectors: .class, #id, [data-test], button.primary
+- Role-based: role:button[Submit], role:link[Home]
+- Test IDs: testid:login-btn
+- Placeholders: placeholder:Enter email
+- Labels: label:Username
+- Plain text: Submit (finds text content)
+
+Only specify required parameters per command type. All other fields are optional.`,
+  inputSchema: {
+    commands: z.array(z.any()).describe('Array of browser commands to execute in sequence')
+  },
   headless: false,
   async run({ page, input, logger }) {
     const results: any[] = [];
